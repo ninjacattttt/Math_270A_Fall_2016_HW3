@@ -6,17 +6,21 @@
 #include "EnergyTests.h"
 
 void EnergyTest(){
-  typedef double T;
-  typedef Eigen::Matrix<T,Eigen::Dynamic,1> TVect;
-  int N=5;
-  T a=(T)0,b=(T)1;
-  T dX=(b-a)/(T)(N-1);
-  JIXIE::NeoHookean<T> nh((T)1);
-  JIXIE::LinearElasticity<T> le((T)1);
+  typedef double T;														
+  typedef Eigen::Matrix<T,Eigen::Dynamic,1> TVect;						//TVect: column vector type
+  int N=5;																//# of dividing points including a,b
+  T a=(T)0,b=(T)1;														//on the interval [a,b]=[0,1]
+  T dX=(b-a)/(T)(N-1);													//stepsize
+  
+  JIXIE::NeoHookean<T> nh((T)1);										//psi=k/2(log(F))^2 case
+  JIXIE::LinearElasticity<T> le((T)1);									//psi=k/2(F-1)^2 case
   JIXIE::FEMHyperelasticity<T> fem(a,dX,N,nh);
-  TVect x(N),f(N);
-  f=TVect::Zero(N);
-  for(int i=0;i<N;i++) x(i)=a+dX*(T)i;
+  
+  //TVect x(N),f(N);
+  //f=TVect::Zero(N);
+  TVect x(N);
+  for(int i=0;i<N;i++)
+	  x(i)=(T).7*(a+dX*(T)i);											//dividing points
 
   JIXIE::EnergyTest<T> et("output",fem,10);
   et.RefinementTest(x);
@@ -26,13 +30,23 @@ void EnergyTest(){
 void ElasticitySimulation(){
   typedef double T;
   typedef Eigen::Matrix<T,Eigen::Dynamic,1> TVect;
-  int N=5;
-  T a=(T)0,b=(T)1;
-  T dX=(b-a)/(T)(N-1);
-  T dt=(T).01;
-  std::string output_dir("output");
-  JIXIE::ElasticityDriver<T> driver((T)1,30,dt,N,a,dX,output_dir);
-  driver.RunSimulation();
+ 
+  JIXIE::ElasticityParameters<T> parameters;
+  parameters.N=20;
+  parameters.a=(T)0;
+  T b=(T)1;
+  parameters.dX=(b-parameters.a)/(T)(parameters.N-1);
+  parameters.dt=(T).01;
+  parameters.output_dir=std::string("output");
+  parameters.rho=(T)1;
+  parameters.k=(T)1;
+  parameters.Newton_tol=(T)1e-8;
+  parameters.max_newton_it=40;
+  parameters.final_time=(T)4;
+  parameters.frames_per_second=120;
+  JIXIE::ElasticityDriver<T> driver(parameters);
+  bool verbose=true;
+  driver.RunSimulation(verbose);
 }
 
 void ConvertBinaryToDat(){
@@ -54,9 +68,8 @@ void ConvertBinaryToDat(){
   }
 }
 
-int main()
-{
-  //EnergyTest();
-  ElasticitySimulation();
-  //ConvertBinaryToDat();
+int main(){
+	EnergyTest();
+  	ElasticitySimulation();
+  	ConvertBinaryToDat();
 }

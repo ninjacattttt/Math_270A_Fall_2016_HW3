@@ -39,12 +39,12 @@ public:
       T PE_plus,PE_minus;
       PE_plus=lf.PotentialEnergy(x+(T).5*epsilon(rf)*delta_x);
       PE_minus=lf.PotentialEnergy(x-(T).5*epsilon(rf)*delta_x);
-      force_error(rf)=fabs((PE_plus-PE_minus)/epsilon(rf)-f.dot(delta_x));
+      force_error(rf)=fabs((PE_plus-PE_minus)/epsilon(rf)+f.dot(delta_x));
       //force/derivative consistency check
       df=TVect::Zero(x.size());
       lf.AddForce(df,x+(T).5*epsilon(rf)*delta_x,(T)1/epsilon(rf));
       lf.AddForce(df,x-(T).5*epsilon(rf)*delta_x,-(T)1/epsilon(rf));
-      lf.AddForceDifferential(df,x,delta_x,(T)-1);
+      lf.AddForceDifferential(df,x,delta_x,-(T)1);
       derivative_error(rf)=df.norm();
     }
     FILE_IO::Write_DAT_File(error_force_filename,force_error);
