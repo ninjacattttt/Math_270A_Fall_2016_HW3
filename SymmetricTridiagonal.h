@@ -194,6 +194,133 @@ public:
     r2(n-2)=temp(0);
     r1(n-1)=temp(1);
   }
+  
+  void Givens(const T x, const T y, T& c, T& s){
+  	T d=x*x+y*y,t;
+  	c=1;
+  	s=0;
+  	if(d!=0){
+  		t=std::sqrt(d);
+  		c=x/t;
+  		s=-y/t;
+  	}
+  }
+  
+  void SetColumn(TMat& A, const TVect& q, int k, int n){			//set column k, in the first n rows
+	  for(int i=0;i<n;i++)
+		  A(i,k)=q(i);
+  }
+  
+  void SetVector(const TMat& A, TVect& x, int k, int n){			//set vector x to be column k of A
+	  for(int i=0;i<n;i++)
+		  x(i)=A(i,k);
+  }
+  
+  void norm(const TVect& b, T& norm){						//norm of a vector with length n
+	  norm=(T) 0;
+	  for(int i=0;i<n;i++)
+		  norm+=b(i)*b(i);
+	  norm=sqrt(norm);
+  }
+  
+  void BackSub(const int& k, const TMat& A, TVect& b, TVect& x){
+	  x(k-1)=b(k-1)/A(k-1,k-1);
+	  for(int i=k-2;i>=0;i--){
+		  for(int j=0;j<i;j++)
+			  b(j)-=x(i)*A(j,i);
+		  x(i)=b(i)/A(i,i);
+	  }
+  }
+  
+  void exit_GMRES(const int& k, const TMat& A, TVect& b, TVect& x, TVect& lambda, const TMat& Q){
+	  BackSub(k, A, b, lambda);
+	  x=Q*lambda;
+  }
+  
+  void GMRES(TVect& x, const TVect& b){
+	  T tol=1e-15;
+	  TVect lambda;
+	  lambda.resize(n);
+	  lambda.setZero();
+	  
+	  TMat A;
+	  Set(A);
+	  
+	  TMat Q, H,G;
+	  Q.resize(n,n);
+	  Q=TMat::Zero(n,n);
+	  H.resize(n+1,n);
+	  H=TMat::Zero(n+1,n);
+	  G.resize(n,n);
+	  G=TMat::Identity(n,n);
+	  
+	  TVect q,vtemp,htemp;
+	  T normtemp,c,s;
+	  
+	  int k=0;
+	  q.resize(n);
+	  vtemp.resize(n);
+	  htemp.resize(n);
+	  
+	  norm(b,normtemp);
+	  q=b/normtemp;						//q_1=b/|b|
+	  SetColumn(Q,q,0,n);
+	  
+	  TVect t;
+	  t.resize(n);
+	  t.setZero();
+	  t(0)=normtemp;
+	  
+	  H(0,0)=q.transpose()*A*q;
+	  vtemp=A*q-H(0,0)*q;
+	  norm(vtemp,normtemp);
+	  H(1,0)=normtemp;
+	  q=vtemp/normtemp;
+	  SetColumn(Q,q,1,n);
+	  Givens(H(0,0),H(1,0),c,s);
+	  G(0,0)=c;							//G_1 transpose
+	  G(0,1)=-s;
+	  G(1,0)=s;
+	  G(1,1)=c;
+	  t=G*t;
+	  H=G*H;
+	  
+	  if(std::abs(t(1))<tol){
+		  exit_GMRES(k,H,t,x,lambda,Q);
+		  return;
+	  }
+	  
+	  for(k=1;k<n;k++){
+		  htemp=Q.transpose()*A*q;
+		  vtemp=A*q-Q*htemp;
+		  norm(vtemp,normtemp);
+		  SetColumn(H,htemp,k,k);
+		  H(k+1,k)=normtemp;
+		  q=vtemp/normtemp;
+		  SetColumn(Q,q,k+1,n);
+		  Givens(H(k,k),H(k+1,k),c,s);
+		  G=TMat::Identity(n,n);
+		  G(k,k)=c;							//G_1 transpose
+		  G(k,k+1)=-s;
+		  G(k+1,k)=s;
+		  G(k+1,k+1)=c;
+		  t=G*t;
+		  H=G*H;
+		  
+		  if(std::abs(t(k+1))<tol){
+			  exit_GMRES(k,H,t,x,lambda,Q);
+			  return;
+		  }
+		
+		exit_GMRES(k,H,t,x,lambda,Q);
+		
+	  }
+	  
+	  
+	
+	
+  }
+  
 };
 }
 #endif

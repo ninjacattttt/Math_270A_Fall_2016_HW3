@@ -101,7 +101,7 @@ public:
     	}
 		
 		force(0)=0;												//no force term for x(0)
-		//force(N-1)+=scale*0.1;								//const force added on the right end
+		force(N-1)+=-scale*0.1;								    //const force added on the right end
   	}
 
   	void AddForceDerivative(SymmetricTridiagonal<T>& A,const TVect& x,T scale=(T)1){

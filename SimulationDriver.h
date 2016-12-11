@@ -111,6 +111,9 @@ public:
     	outdata.close();
     	Write_State(number,simulation_data_filename);
   	}
+	
+	virtual void WriteObj(const int number){}
+	virtual void InitObj(){}
 
   	virtual void Write_State(const int number,std::string& simulation_data_filename){}
   	virtual bool Read_State(const int number,std::string& simulation_data_filename){return false;}
@@ -121,14 +124,18 @@ public:
 
   	void RunSimulation(const bool verbose=false){
 		Initialize();
+		InitObj();
     	while(time<final_time){
       	  	if(verbose)
         		std::cout << "Time = " << time << ", frame = " << current_frame << ", dt = " << dt << std::endl;
       	  	bool write_to_file=false;
       	  	Set_Dt(write_to_file);
       	  	Advance_One_Time_Step(verbose);
-      	  	if(write_to_file) 
+      	  	if(write_to_file){
 				WriteState(current_frame);
+				WriteObj(current_frame);
+			}
+				
     	}
   	}
 };
@@ -230,7 +237,10 @@ public:
 		  	be_matrix(0,1)=0;
 		  	be_matrix(1,0)=0;
 		  
-    	  	be_matrix.QRSolve(delta,residual);
+    	  	//be_matrix.QRSolve(delta,residual);
+			
+			be_matrix.GMRES(delta,residual);							//GMRES method
+			
     	  	x_np1+=delta;
 		}
 		
@@ -242,7 +252,98 @@ public:
 		x_n=x_np1;
   	}
   
+	void InitObj(){									//Initial state. Not really rendered in Houdini...Just for record
+		T a=(T) 0;
+    	char str[12];
+    	sprintf(str, "%d", 0);
+    	std::string frame_name(str);
+
+    	//std::string positions_filename(std::string("particle_x_")+frame_name);
+		std::ofstream outfile(std::string("/Users/ninjacat/Desktop/UCLA16FALL/270A/git/Math_270A_Fall_2016_HW3/obj/")+std::string("frame_")+ frame_name + std::string(".obj"));
+		
+		for(int e=0;e<=N-1;e++){
+			a=(T).1/(T)0.7;												//epsilon=0.1
+			outfile << "v " << x_n(e) << " " << a << " " << a << " " <<std::endl;
+			outfile << "v " << x_n(e) << " " << a << " " << -a << " " <<std::endl;
+			outfile << "v " << x_n(e) << " " << -a << " " << a << " " <<std::endl;
+			outfile << "v " << x_n(e) << " " << -a << " " << -a << " " <<std::endl;
+		}
+		
+		//e=0;
+		outfile << "f " << 1 << " " << 2 << " " << 4 << " " <<std::endl;
+		outfile << "f " << 1 << " " << 3 << " " << 4 << " " <<std::endl;
+		
+		for(int e=1;e<=N-1;e++){
+			outfile << "f " << 4*(e-1)+1 << " " << 4*(e-1)+2 << " " << 4*e+2 << " " <<std::endl;
+			outfile << "f " << 4*(e-1)+1 << " " << 4*e+1 << " " << 4*e+2 << " " <<std::endl;
+			
+			outfile << "f " << 4*(e-1)+1 << " " << 4*(e-1)+3 << " " << 4*e+1 << " " <<std::endl;
+			outfile << "f " << 4*(e-1)+3 << " " << 4*e+1 << " " << 4*e+3 << " " <<std::endl;
+			
+			outfile << "f " << 4*(e-1)+3 << " " << 4*e << " " << 4*e+3 << " " <<std::endl;
+			outfile << "f " << 4*e+3 << " " << 4*e << " " << 4*(e+1) << " " <<std::endl;
+			
+			outfile << "f " << 4*(e-1)+2 << " " << 4*e << " " << 4*(e+1) << " " <<std::endl;
+			outfile << "f " << 4*(e-1)+2 << " " << 4*e+2 << " " << 4*(e+1) << " " <<std::endl;
+		}
+		
+		//e=N-1;
+		outfile << "f " << 4*(N-1)+1 << " " << 4*(N-1)+2 << " " << 4*(N-1)+4 << " " <<std::endl;
+		outfile << "f " << 4*(N-1)+1 << " " << 4*(N-1)+3 << " " << 4*(N-1)+4 << " " <<std::endl;
+		
+		outfile.close();
+		
+	}
   
+  
+	void WriteObj(const int number){
+		T a=(T) 0;
+    	char str[12];
+    	sprintf(str, "%d", number);
+    	std::string frame_name(str);
+
+    	//std::string positions_filename(std::string("particle_x_")+frame_name);
+		std::ofstream outfile(std::string("/Users/ninjacat/Desktop/UCLA16FALL/270A/git/Math_270A_Fall_2016_HW3/obj/")+std::string("frame_")+ frame_name + std::string(".obj"));
+		
+		//a=(T).1/(T)0.7;															// the left surface is glued to the wall
+		a=(T).1/std::sqrt(((T) x_np1(1)-x_np1(0))/( (T) dX));						// only the centerpoint is glued
+		outfile << "v " << x_np1(0) << " " << a << " " << a << " " <<std::endl;
+		outfile << "v " << x_np1(0) << " " << a << " " << -a << " " <<std::endl;
+		outfile << "v " << x_np1(0) << " " << -a << " " << a << " " <<std::endl;
+		outfile << "v " << x_np1(0) << " " << -a << " " << -a << " " <<std::endl;
+		
+		for(int e=1;e<=N-1;e++){
+			a=(T).1/std::sqrt(((T) x_np1(e)-x_np1(e-1))/( (T) dX));					//epsilon=0.1
+			outfile << "v " << x_np1(e) << " " << a << " " << a << " " <<std::endl;
+			outfile << "v " << x_np1(e) << " " << a << " " << -a << " " <<std::endl;
+			outfile << "v " << x_np1(e) << " " << -a << " " << a << " " <<std::endl;
+			outfile << "v " << x_np1(e) << " " << -a << " " << -a << " " <<std::endl;
+		}
+		
+		//e=0;
+		outfile << "f " << 1 << " " << 2 << " " << 4 << " " <<std::endl;
+		outfile << "f " << 1 << " " << 3 << " " << 4 << " " <<std::endl;
+		
+		for(int e=1;e<=N-1;e++){
+			outfile << "f " << 4*(e-1)+1 << " " << 4*(e-1)+2 << " " << 4*e+2 << " " <<std::endl;
+			outfile << "f " << 4*(e-1)+1 << " " << 4*e+1 << " " << 4*e+2 << " " <<std::endl;
+			
+			outfile << "f " << 4*(e-1)+1 << " " << 4*(e-1)+3 << " " << 4*e+1 << " " <<std::endl;
+			outfile << "f " << 4*(e-1)+3 << " " << 4*e+1 << " " << 4*e+3 << " " <<std::endl;
+			
+			outfile << "f " << 4*(e-1)+3 << " " << 4*e << " " << 4*e+3 << " " <<std::endl;
+			outfile << "f " << 4*e+3 << " " << 4*e << " " << 4*(e+1) << " " <<std::endl;
+			
+			outfile << "f " << 4*(e-1)+2 << " " << 4*e << " " << 4*(e+1) << " " <<std::endl;
+			outfile << "f " << 4*(e-1)+2 << " " << 4*e+2 << " " << 4*(e+1) << " " <<std::endl;
+		}
+		
+		//e=N-1;
+		outfile << "f " << 4*(N-1)+1 << " " << 4*(N-1)+2 << " " << 4*(N-1)+4 << " " <<std::endl;
+		outfile << "f " << 4*(N-1)+1 << " " << 4*(N-1)+3 << " " << 4*(N-1)+4 << " " <<std::endl;
+		
+		outfile.close();
+	}
 
   	void Write_State(const int number,std::string& simulation_data_filename){
     	std::ofstream basic_outdata;

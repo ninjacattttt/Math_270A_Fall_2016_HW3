@@ -42,7 +42,7 @@ void ElasticitySimulation(){
   parameters.k=(T)1;
   parameters.Newton_tol=(T)1e-8;
   parameters.max_newton_it=40;
-  parameters.final_time=(T)4;
+  parameters.final_time=(T)8;
   parameters.frames_per_second=120;
   JIXIE::ElasticityDriver<T> driver(parameters);
   bool verbose=true;
